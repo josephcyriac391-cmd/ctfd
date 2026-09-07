@@ -1,0 +1,115 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+    <div class="container">
+        <h1>Edit Path: {{ path.name }}</h1>
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Path Settings</h2>
+            <form method="POST">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" class="form-control" name="name" value="{{ path.name }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-control" name="description">{{ path.description }}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>Token</label>
+                    <input type="text" class="form-control" name="token" value="{{ path.token or '' }}">
+                </div>
+                <div class="form-group">
+                    <label>Mode</label>
+                    <select class="form-control" name="mode">
+                        <option value="strict" {% if path.mode == 'strict' %}selected{% endif %}>Strict (Sequential Unlocking)</option>
+                        <option value="free" {% if path.mode == 'free' %}selected{% endif %}>Free (All challenges visible immediately)</option>
+                    </select>
+                </div>
+                <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                <button class="btn btn-primary" type="submit">Save</button>
+            </form>
+        </div>
+        <div class="col-md-6">
+            <h2>Path Challenges</h2>
+            <ul id="challenge-list" class="list-group mb-3">
+                {% for pc in path.challenges %}
+                <li class="list-group-item d-flex justify-content-between align-items-center" data-id="{{ pc.challenge_id }}">
+                    <span><i class="fas fa-bars mr-2" style="cursor: grab;"></i> {{ pc.stage_order }}. {{ pc.challenge.name }}</span>
+                    <button class="btn btn-sm btn-danger remove-challenge" data-id="{{ pc.challenge_id }}">Remove</button>
+                </li>
+                {% endfor %}
+            </ul>
+            
+            <h4>Add Challenge</h4>
+            <div class="input-group mb-3">
+                <select id="new-challenge-id" class="form-control">
+                    {% for c in challenges %}
+                    <option value="{{ c.id }}">{{ c.name }}</option>
+                    {% endfor %}
+                </select>
+                <div class="input-group-append">
+                    <button id="add-challenge-btn" class="btn btn-success">Add to Path</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var el = document.getElementById('challenge-list');
+    if(el) {
+        var sortable = Sortable.create(el, {
+            onEnd: function () {
+                var items = el.querySelectorAll('li');
+                var ids = [];
+                items.forEach(function(item) {
+                    ids.push(parseInt(item.getAttribute('data-id')));
+                });
+                
+                fetch("{{ url_for('admin_team_paths.reorder_challenges', path_id=path.id) }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'CSRF-Token': init.csrfNonce
+                    },
+                    body: JSON.stringify({challenge_ids: ids})
+                }).then(() => window.location.reload());
+            }
+        });
+    }
+
+    document.getElementById('add-challenge-btn').addEventListener('click', function() {
+        var chalId = document.getElementById('new-challenge-id').value;
+        fetch("{{ url_for('admin_team_paths.assign_challenge_to_path', path_id=path.id) }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'CSRF-Token': init.csrfNonce
+            },
+            body: JSON.stringify({challenge_id: chalId})
+        }).then(() => window.location.reload());
+    });
+
+    document.querySelectorAll('.remove-challenge').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var chalId = this.getAttribute('data-id');
+            fetch("{{ url_for('admin_team_paths.remove_challenge_from_path', path_id=path.id, challenge_id=0) }}".replace('0', chalId), {
+                method: 'DELETE',
+                headers: {
+                    'CSRF-Token': init.csrfNonce
+                }
+            }).then(() => window.location.reload());
+        });
+    });
+});
+</script>
+{% endblock %}

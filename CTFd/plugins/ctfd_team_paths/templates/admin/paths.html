@@ -1,0 +1,112 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+    <div class="container">
+        <h1>Treasure Paths</h1>
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <h2>Create New Path</h2>
+            <form method="POST" action="{{ url_for('admin_team_paths.create_path') }}">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" class="form-control" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-control" name="description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Token (Optional, for auto-join)</label>
+                    <input type="text" class="form-control" name="token">
+                </div>
+                <div class="form-group">
+                    <label>Mode</label>
+                    <select class="form-control" name="mode">
+                        <option value="strict">Strict (Sequential Unlocking)</option>
+                        <option value="free">Free (All challenges visible immediately)</option>
+                    </select>
+                </div>
+                <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                <button class="btn btn-primary" type="submit">Create</button>
+            </form>
+        </div>
+    </div>
+    
+    <hr>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <h2>Existing Paths</h2>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Mode</th>
+                        <th>Token</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for path in paths %}
+                    <tr>
+                        <td>{{ path.name }}</td>
+                        <td>{{ path.mode }}</td>
+                        <td>{{ path.token or 'None' }}</td>
+                        <td>
+                            <a href="{{ url_for('admin_team_paths.path_detail', path_id=path.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6">
+            <h2>Assign Team to Path</h2>
+            <form method="POST" action="{{ url_for('admin_team_paths.assign_team') }}">
+                <div class="form-group">
+                    <label>Team</label>
+                    <select class="form-control" name="team_id" required>
+                        {% for team in teams %}
+                        <option value="{{ team.id }}">{{ team.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Path</label>
+                    <select class="form-control" name="path_id" required>
+                        {% for path in paths %}
+                        <option value="{{ path.id }}">{{ path.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <input type="hidden" name="nonce" value="{{ Session.nonce }}">
+                <button class="btn btn-success" type="submit">Assign</button>
+            </form>
+            
+            <h3 class="mt-4">Current Assignments</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th>Path</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in assignments %}
+                    <tr>
+                        <td>{{ a.team.name }}</td>
+                        <td>{{ a.path.name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <a href="{{ url_for('admin_team_paths.monitor_paths') }}" class="btn btn-info w-100 mt-3">Open Live Monitor</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

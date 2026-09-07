@@ -1,0 +1,65 @@
+{% extends "admin/base.html" %}
+
+{% block content %}
+<div class="jumbotron">
+    <div class="container">
+        <h1>Treasure Hunt Monitor</h1>
+        <p>Live progress of all teams on their assigned paths.</p>
+    </div>
+</div>
+<div class="container">
+    <div class="row">
+        <div class="col-md-12">
+            <table class="table table-striped" id="monitor-table">
+                <thead>
+                    <tr>
+                        <th>Team</th>
+                        <th>Path</th>
+                        <th>Progress</th>
+                        <th>Score</th>
+                        <th>Last Solve</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function refreshMonitor() {
+    fetch("{{ url_for('admin_team_paths.monitor_api') }}", {
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(r => r.json())
+    .then(data => {
+        if(data.success) {
+            const tbody = document.querySelector('#monitor-table tbody');
+            tbody.innerHTML = '';
+            data.data.forEach(row => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.team}</td>
+                    <td>${row.path}</td>
+                    <td>Stage ${row.completed} of ${row.total}</td>
+                    <td>${row.score}</td>
+                    <td>${row.last_solve !== 'None' ? new Date(row.last_solve).toLocaleTimeString() : 'N/A'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    refreshMonitor();
+    setInterval(refreshMonitor, 15000); // refresh every 15 seconds
+});
+</script>
+{% endblock %}
